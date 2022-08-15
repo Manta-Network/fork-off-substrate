@@ -17,14 +17,14 @@ const forkedSpecPath = path.join(__dirname, 'data', 'fork.json');
 const storagePath = path.join(__dirname, 'data', 'storage.json');
 
 // Using http endpoint since substrate's Ws endpoint has a size limit.
-const provider = new HttpProvider(process.env.HTTP_RPC_ENDPOINT || 'http://localhost:9933')
+const provider = new HttpProvider(process.env.HTTP_RPC_ENDPOINT || 'http://localhost:9971')
 // The storage download will be split into 256^chunksLevel chunks.
 const chunksLevel = process.env.FORK_CHUNKS_LEVEL || 1;
 const totalChunks = Math.pow(256, chunksLevel);
 
 const alice = process.env.ALICE || ''
-const originalChain = process.env.ORIG_CHAIN || '';
-const forkChain = process.env.FORK_CHAIN || '';
+const originalChain = process.env.ORIG_CHAIN || 'dolphin-dev';
+const forkChain = process.env.FORK_CHAIN || 'dolphin-dev';
 
 let chunksFetched = 0;
 let separator = false;
@@ -44,9 +44,13 @@ const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_cla
  * e.g. console.log(xxhashAsHex('System', 128)).
  */
 let prefixes = ['0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da9' /* System.Account */];
-const skippedModulesPrefix = ['System', 'Session', 'Babe', 'Grandpa', 'GrandpaFinality', 'FinalityTracker', 'Authorship'];
+const skippedModulesPrefix = ['System', 'Session', 'Babe', 'Grandpa', 'GrandpaFinality', 'FinalityTracker', 'Authorship', 'CollatorSelection',
+                              'ParachainSystem', 'Timestamp','ParachainInfo', 'TransactionPause', 'Balances', 'TransactionPayment', 'Democracy',
+                              'Council', 'CouncilMembership','TechnicalCommittee', 'AuthorInherent', 'AuraAuthorFilter', 'Aura', 'Treasury',
+                              'XcmpQueue', 'PolkadotXcm', 'CumulusXcm', 'DmpQueue', 'XTokens', 'Utility', 'Multisig',
+                              'Preimage', 'Scheduler', 'Sudo', 'Assets', 'AssetManager', "TechnicalMembership", 'AuraExt']
 
-async function fixParachinStates (api, forkedSpec) {
+async function fixParachainStates (api, forkedSpec) {
   const skippedKeys = [
     api.query.parasScheduler.sessionStartBlock.key()
   ];
@@ -102,23 +106,16 @@ async function main() {
   const modules = metadata.asLatest.pallets;
   modules.forEach((module) => {
     if (module.storage) {
-      if (!skippedModulesPrefix.includes(module.name)) {
+      if (!skippedModulesPrefix.includes(module.name.toHuman())) {
         prefixes.push(xxhashAsHex(module.name, 128));
       }
     }
   });
+  console.log("\n prefixes: ", prefixes);
 
   // Generate chain spec for original and forked chains
-  if (originalChain == '') {
-    execSync(binaryPath + ` build-spec --raw > ` + originalSpecPath);
-  } else {
-    execSync(binaryPath + ` build-spec --chain ${originalChain} --raw > ` + originalSpecPath);
-  }
-  if (forkChain == '') {
-    execSync(binaryPath + ` build-spec --dev --raw > ` + forkedSpecPath);
-  } else {
-    execSync(binaryPath + ` build-spec --chain ${forkChain} --raw > ` + forkedSpecPath);
-  }
+  execSync(binaryPath + ` build-spec --chain ${originalChain} --raw > ` + originalSpecPath);
+  execSync(binaryPath + ` build-spec --chain ${forkChain} --raw > ` + forkedSpecPath);
 
   let storage = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
   let originalSpec = JSON.parse(fs.readFileSync(originalSpecPath, 'utf8'));
@@ -137,7 +134,7 @@ async function main() {
   // Delete System.LastRuntimeUpgrade to ensure that the on_runtime_upgrade event is triggered
   delete forkedSpec.genesis.raw.top['0x26aa394eea5630e07c48ae0c9558cef7f9cce9c888469bb1a0dceaa129672ef8'];
 
-  fixParachinStates(api, forkedSpec);
+  fixParachainStates(api, forkedSpec);
 
   // Set the code to the current runtime code
   forkedSpec.genesis.raw.top['0x3a636f6465'] = '0x' + fs.readFileSync(hexPath, 'utf8').trim();
@@ -172,12 +169,12 @@ async function fetchChunks(prefix, levelsRemaining, stream, at) {
   // Async fetch the last level
   if (process.env.QUICK_MODE && levelsRemaining == 1) {
     let promises = [];
-    for (let i = 0; i < 256; i++) {
+    for (let i = 0; i < totalChunks; i++) {
       promises.push(fetchChunks(prefix + i.toString(16).padStart(2, "0"), levelsRemaining - 1, stream, at));
     }
     await Promise.all(promises);
   } else {
-    for (let i = 0; i < 256; i++) {
+    for (let i = 0; i < totalChunks; i++) {
       await fetchChunks(prefix + i.toString(16).padStart(2, "0"), levelsRemaining - 1, stream, at);
     }
   }
