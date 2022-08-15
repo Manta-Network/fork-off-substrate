@@ -10,14 +10,13 @@ const execFileSync = require('child_process').execFileSync;
 const execSync = require('child_process').execSync;
 const binaryPath = path.join(__dirname, 'data', 'binary');
 const wasmPath = path.join(__dirname, 'data', 'runtime.wasm');
-const schemaPath = path.join(__dirname, 'data', 'schema.json');
 const hexPath = path.join(__dirname, 'data', 'runtime.hex');
 const originalSpecPath = path.join(__dirname, 'data', 'genesis.json');
 const forkedSpecPath = path.join(__dirname, 'data', 'fork.json');
 const storagePath = path.join(__dirname, 'data', 'storage.json');
 
 // Using http endpoint since substrate's Ws endpoint has a size limit.
-const provider = new HttpProvider(process.env.HTTP_RPC_ENDPOINT || 'http://localhost:9971')
+const provider = new HttpProvider(process.env.HTTP_RPC_ENDPOINT || 'http://localhost:9913')
 // The storage download will be split into 256^chunksLevel chunks.
 const chunksLevel = process.env.FORK_CHUNKS_LEVEL || 1;
 const totalChunks = Math.pow(256, chunksLevel);
@@ -74,17 +73,7 @@ async function main() {
 
   let api;
   console.log(chalk.green('We are intentionally using the HTTP endpoint. If you see any warnings about that, please ignore them.'));
-  if (!fs.existsSync(schemaPath)) {
-    console.log(chalk.yellow('Custom Schema missing, using default schema.'));
-    api = await ApiPromise.create({ provider });
-  } else {
-    const { types, rpc } = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-    api = await ApiPromise.create({
-      provider,
-      types,
-      rpc,
-    });
-  }
+  api = await ApiPromise.create({ provider });
 
   if (fs.existsSync(storagePath)) {
     console.log(chalk.yellow('Reusing cached storage. Delete ./data/storage.json and rerun the script if you want to fetch latest storage'));
