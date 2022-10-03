@@ -43,10 +43,10 @@ const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_cla
  * e.g. console.log(xxhashAsHex('System', 128)).
  */
 let prefixes = ['0x26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da9' /* System.Account */];
-const skippedModulesPrefix = ['System', 'Session', 'Babe', 'Authorship', 'CollatorSelection', 'ParachainSystem', 'Timestamp','ParachainInfo', 
+const skippedModulesPrefix = ['System', 'Session', 'Authorship', 'CollatorSelection', 'ParachainSystem', 'Timestamp','ParachainInfo', 
 'TransactionPause', 'Balances', 'TransactionPayment', 'Democracy', 'Council', 'CouncilMembership','TechnicalCommittee', 'AuthorInherent', 'AuraAuthorFilter',
 'Aura', 'Treasury', 'XcmpQueue', 'PolkadotXcm', 'CumulusXcm', 'DmpQueue', 'XTokens', 'Utility', 'Multisig', 'Preimage', 'Scheduler', 'Sudo', 
-'TechnicalMembership', 'AuraExt']
+'TechnicalMembership', 'AuraExt', 'MantaPay', 'AssetManager', 'Assets', 'ParachainStaking', 'AuthorInherent', 'AuraAuthorFilter']
 
 async function fixParachainStates (api, forkedSpec) {
   const skippedKeys = [
